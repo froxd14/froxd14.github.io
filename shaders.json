@@ -7,8 +7,8 @@
       "tags": ["glsl", "fractal", "fragment"],
       "type": "glsl",
       "preview": "assets/previews/fractal.jpg",
-      "date": "2024-12-15",
-      "author": "CodeArtist",
+      "date": "2025-06-13",
+      "author": "froxd14",
       "shaderCode": "assets/shaders/fractal.glsl",
       "livePreview": true,
       "featured": true
