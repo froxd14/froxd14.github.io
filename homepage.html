@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shader Preview Gallery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: #94a3b8;
+            font-weight: 300;
+        }
+
+        .filters {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #e2e8f0;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            font-weight: 500;
+        }
+
+        .filter-btn:hover {
+            background: rgba(102, 126, 234, 0.3);
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-color: transparent;
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .shader-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            backdrop-filter: blur(15px);
+            position: relative;
+            cursor: pointer;
+        }
+
+        .shader-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+
+        .card-preview {
+            position: relative;
+            height: 250px;
+            overflow: hidden;
+            background: linear-gradient(45deg, #1a1a2e, #16213e);
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .shader-card:hover .preview-image {
+            transform: scale(1.05);
+        }
+
+        .preview-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+
+        .card-description {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .tag {
+            background: rgba(102, 126, 234, 0.2);
+            color: #a5b4fc;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .play-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 50%;
+            padding: 1rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .shader-card:hover .play-overlay {
+            opacity: 1;
+        }
+
+        .play-icon {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #64748b;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 15, 35, 0.95);
+            border-radius: 20px;
+            padding: 2rem;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+            
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .filters {
+                gap: 0.5rem;
+            }
+            
+            .filter-btn {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1 class="logo">Shader Gallery</h1>
+            <p class="subtitle">Visual Code Showcase</p>
+        </header>
+
+        <div class="filters" id="filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Loading shaders...</p>
+        </div>
+
+        <div class="gallery" id="gallery"></div>
+    </div>
+
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // Sample shader data - replace with your JSON file
+        const sampleShaders = [
+            {
+                id: 1,
+                title: "Fragment Fractal",
+                description: "A mesmerizing fractal pattern generated in real-time using fragment shaders with dynamic color cycling.",
+                tags: ["glsl", "fractal", "fragment"],
+                type: "glsl",
+                preview: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQxIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzY2N2VlYTtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSI1MCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM3NjRiYTI7c3RvcC1vcGFjaXR5OjEiIC8+CjxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6IzU5NDNhYTtzdG9wLW9wYWNpdHk6MSIgLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgZmlsbD0idXJsKCNncmFkMSkiLz4KPGNpcmNsZSBjeD0iMjAwIiBjeT0iMTI1IiByPSI4MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIG9wYWNpdHk9IjAuMyIvPgo8Y2lyY2xlIGN4PSIyMDAiIGN5PSIxMjUiIHI9IjUwIiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgb3BhY2l0eT0iMC41Ii8+CjxjaXJjbGUgY3g9IjIwMCIgY3k9IjEyNSIgcj0iMjAiIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuNyIvPgo8L3N2Zz4=",
+                date: "2024-12-15",
+                author: "CodeArtist"
+            },
+            {
+                id: 2,
+                title: "WebGL Particle System",
+                description: "Interactive particle system with physics simulation and real-time lighting effects.",
+                tags: ["webgl", "particles", "physics"],
+                type: "webgl",
+                preview: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzPgo8cmFkaWFsR3JhZGllbnQgaWQ9ImdyYWQyIiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPgo8c3RvcCBvZmZzZXQ9IjAlIiBzdHlsZT0ic3RvcC1jb2xvcjojZmY2ZTdmO3N0b3Atb3BhY2l0eToxIiAvPgo8c3RvcCBvZmZzZXQ9IjEwMCUiIHN0eWxlPSJzdG9wLWNvbG9yOiMyMjIyNGU7c3RvcC1vcGFjaXR5OjEiIC8+CjwvcmFkaWFsR3JhZGllbnQ+CjwvZGVmcz4KPHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSIyNTAiIGZpbGw9InVybCgjZ3JhZDIpIi8+CjxjaXJjbGUgY3g9IjEwMCIgY3k9IjgwIiByPSI0IiBmaWxsPSIjZmY2ZTdmIiBvcGFjaXR5PSIwLjgiLz4KPGNpcmNsZSBjeD0iMzAwIiBjeT0iNjAiIHI9IjMiIGZpbGw9IiNmZjZlN2YiIG9wYWNpdHk9IjAuNiIvPgo8Y2lyY2xlIGN4PSIyNTAiIGN5PSIxODAiIHI9IjUiIGZpbGw9IiNmZjZlN2YiIG9wYWNpdHk9IjAuOSIvPgo8Y2lyY2xlIGN4PSIxNTAiIGN5PSIyMDAiIHI9IjIiIGZpbGw9IiNmZjZlN2YiIG9wYWNpdHk9IjAuNSIvPgo8Y2lyY2xlIGN4PSIzNTAiIGN5PSIxNDAiIHI9IjYiIGZpbGw9IiNmZjZlN2YiIG9wYWNpdHk9IjEiLz4KPC9zdmc+",
+                date: "2024-12-10",
+                author: "WebGLMaster"
+            },
+            {
+                id: 3,
+                title: "Canvas Fluid Dynamics",
+                description: "Smooth fluid simulation with mouse interaction and color mixing effects.",
+                tags: ["canvas", "fluid", "interactive"],
+                type: "canvas",
+                preview: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgdmlld0JveD0iMCAwIDQwMCAyNTAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxkZWZzPgo8bGluZWFyR3JhZGllbnQgaWQ9ImdyYWQzIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj4KPHN0b3Agb2Zmc2V0PSIwJSIgc3R5bGU9InN0b3AtY29sb3I6IzE5ZjJjODtzdG9wLW9wYWNpdHk6MSIgLz4KPHN0b3Agb2Zmc2V0PSI1MCUiIHN0eWxlPSJzdG9wLWNvbG9yOiM0ZjQ2ZTU7c3RvcC1vcGFjaXR5OjEiIC8+CjxzdG9wIG9mZnNldD0iMTAwJSIgc3R5bGU9InN0b3AtY29sb3I6IzA1NGY0ZjtzdG9wLW9wYWNpdHk6MSIgLz4KPC9saW5lYXJHcmFkaWVudD4KPC9kZWZzPgo8cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjI1MCIgZmlsbD0idXJsKCNncmFkMykiLz4KPHBhdGggZD0iTTAgMTI1IFEgMTAwIDUwIDIwMCAxMjUgVCAzMDAgMTc1IFQgNDAwIDEyNSBWIDI1MCBIIDAgWiIgZmlsbD0iIzE5ZjJjOCIgb3BhY2l0eT0iMC4zIi8+CjxwYXRoIGQ9Ik0wIDE1MCBRIDEwMCA4MCAyMDAgMTUwIFQgMzAwIDIwMCBUIDQwMCAxNTAgViAyNTAgSCAwIFoiIGZpbGw9IiMxOWYyYzgiIG9wYWNpdHk9IjAuMiIvPgo8L3N2Zz4=",
+                date: "2024-12-08",
+                author: "FluidCoder"
+            }
+        ];
+
+        let allShaders = [];
+        let currentFilter = 'all';
+
+        // Initialize the gallery
+        async function initGallery() {
+            try {
+                // For now, use sample data. Later replace with:
+                // const response = await fetch('shaders.json');
+                // allShaders = await response.json();
+                allShaders = sampleShaders;
+                
+                setupFilters();
+                renderGallery();
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading shaders:', error);
+                hideLoading();
+                document.getElementById('gallery').innerHTML = '<p style="text-align: center; color: #64748b;">Error loading shaders. Please try again later.</p>';
+            }
+        }
+
+        function setupFilters() {
+            const filtersContainer = document.getElementById('filters');
+            const tags = [...new Set(allShaders.flatMap(shader => shader.tags))];
+            
+            // Clear existing filters except "All"
+            filtersContainer.innerHTML = '<button class="filter-btn active" data-filter="all">All</button>';
+            
+            // Add tag filters
+            tags.forEach(tag => {
+                const btn = document.createElement('button');
+                btn.className = 'filter-btn';
+                btn.dataset.filter = tag;
+                btn.textContent = tag.charAt(0).toUpperCase() + tag.slice(1);
+                btn.addEventListener('click', () => filterShaders(tag));
+                filtersContainer.appendChild(btn);
+            });
+
+            // Add event listener to "All" button
+            document.querySelector('[data-filter="all"]').addEventListener('click', () => filterShaders('all'));
+        }
+
+        function filterShaders(filter) {
+            currentFilter = filter;
+            
+            // Update active filter button
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === filter) {
+                    btn.classList.add('active');
+                }
+            });
+
+            renderGallery();
+        }
+
+        function renderGallery() {
+            const gallery = document.getElementById('gallery');
+            const filteredShaders = currentFilter === 'all' 
+                ? allShaders 
+                : allShaders.filter(shader => shader.tags.includes(currentFilter));
+
+            gallery.innerHTML = filteredShaders.map(shader => `
+                <div class="shader-card" onclick="openModal(${shader.id})">
+                    <div class="card-preview">
+                        <img src="${shader.preview}" alt="${shader.title}" class="preview-image" />
+                        <div class="play-overlay">
+                            <svg class="play-icon" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <h3 class="card-title">${shader.title}</h3>
+                        <p class="card-description">${shader.description}</p>
+                        <div class="card-tags">
+                            ${shader.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                        <div class="card-meta">
+                            <span>By ${shader.author}</span>
+                            <span>${new Date(shader.date).toLocaleDateString()}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openModal(shaderId) {
+            const shader = allShaders.find(s => s.id === shaderId);
+            if (!shader) return;
+
+            const modal = document.getElementById('modal');
+            const modalBody = document.getElementById('modal-body');
+            
+            modalBody.innerHTML = `
+                <h2 style="color: #ffffff; margin-bottom: 1rem;">${shader.title}</h2>
+                <div style="margin-bottom: 2rem;">
+                    <img src="${shader.preview}" alt="${shader.title}" style="width: 100%; max-width: 600px; border-radius: 12px;" />
+                </div>
+                <p style="color: #94a3b8; margin-bottom: 1.5rem; font-size: 1.1rem;">${shader.description}</p>
+                <div style="margin-bottom: 1.5rem;">
+                    ${shader.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+                <div style="color: #64748b;">
+                    <p><strong>Author:</strong> ${shader.author}</p>
+                    <p><strong>Date:</strong> ${new Date(shader.date).toLocaleDateString()}</p>
+                    <p><strong>Type:</strong> ${shader.type.toUpperCase()}</p>
+                </div>
+                <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <p style="color: #94a3b8; font-style: italic;">Shader code and live preview will be implemented here.</p>
+                </div>
+            `;
+            
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modal').addEventListener('click', (e) => {
+            if (e.target.id === 'modal') {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Initialize gallery when page loads
+        document.addEventListener('DOMContentLoaded', initGallery);
+    </script>
+</body>
+</html>
